@@ -1,0 +1,22 @@
+name: CUDA Inference Engine CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Build Essentials
+        run: sudo apt-get update && sudo apt-get install -y cmake g++ libgtest-dev
+      - name: Build & Run Tests (CPU Fallback / CUDA Emulation)
+        run: |
+          mkdir -p build && cd build
+          cmake ..
+          cmake --build .
+          ctest --output-on-failure
+          ./bench_inference
