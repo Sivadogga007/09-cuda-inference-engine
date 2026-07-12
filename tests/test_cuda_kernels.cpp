@@ -5,7 +5,7 @@
 #include "cuda_kernels.cuh"
 #include "tensor.hpp"
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || defined(CUDA_FOUND)
 #include <cuda_runtime.h>
 #endif
 
