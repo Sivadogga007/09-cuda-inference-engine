@@ -7,7 +7,7 @@
 
 namespace inference {
 
-// 1. RMSNorm CUDA Kernel
+// 1. Multi-Warp RMSNorm CUDA Kernel
 __global__ void rmsnorm_kernel(float* out, const float* in, const float* weight, int rows, int cols, float eps) {
     int row = blockIdx.x;
     if (row >= rows) return;
@@ -26,13 +26,26 @@ __global__ void rmsnorm_kernel(float* out, const float* in, const float* weight,
         sum_sq += __shfl_down_sync(0xffffffff, sum_sq, offset);
     }
 
-    __shared__ float s_variance;
-    if (threadIdx.x == 0) {
-        s_variance = rsqrtf((sum_sq / cols) + eps);
+    __shared__ float s_warp_sums[32];
+    int lane = threadIdx.x % 32;
+    int wid = threadIdx.x / 32;
+    if (lane == 0) {
+        s_warp_sums[wid] = sum_sq;
     }
     __syncthreads();
 
-    float rsqrt_var = s_variance;
+    __shared__ float s_rsqrt_var;
+    if (threadIdx.x == 0) {
+        float total_sum = 0.0f;
+        int num_warps = (blockDim.x + 31) / 32;
+        for (int w = 0; w < num_warps; ++w) {
+            total_sum += s_warp_sums[w];
+        }
+        s_rsqrt_var = rsqrtf((total_sum / cols) + eps);
+    }
+    __syncthreads();
+
+    float rsqrt_var = s_rsqrt_var;
     for (int col = threadIdx.x; col < cols; col += blockDim.x) {
         out_row[col] = in_row[col] * rsqrt_var * weight[col];
     }
@@ -41,6 +54,7 @@ __global__ void rmsnorm_kernel(float* out, const float* in, const float* weight,
 void launch_rmsnorm(float* out, const float* in, const float* weight, int rows, int cols, float eps, void* stream) {
     cudaStream_t s = stream ? reinterpret_cast<cudaStream_t>(stream) : 0;
     int threads = std::min(256, ((cols + 31) / 32) * 32);
+    if (threads < 32) threads = 32;
     rmsnorm_kernel<<<rows, threads, 0, s>>>(out, in, weight, rows, cols, eps);
 }
 
@@ -96,13 +110,11 @@ void launch_awq_int4_gemm(float* out, const float* act, const uint8_t* packed_w,
     awq_gemm_kernel<<<blocks, threads, 0, s>>>(out, act, packed_w, scales, zeros, M, N, K, group_size);
 }
 
-void launch_rope(float* q, float* k, const float* cos_sin, int batch_size, int seq_len, int num_heads, int head_dim, void* stream) {
-    // RoPE kernel launcher
-}
+void launch_rope(float*, float*, const float*, int, int, int, int, void*) {}
 
 } // namespace inference
 
-#else // Host / CPU Fallback Implementation
+#else // Host / CPU Fallback
 
 namespace inference {
 
