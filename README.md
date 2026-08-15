@@ -1,6 +1,6 @@
 # High-Performance C++/CUDA LLM Inference Engine
 
-[![CUDA Inference Engine CI](https://github.com/Sivadogga007/09-cuda-inference-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sivadogga007/09-cuda-inference-engine/actions/workflows/ci.yml)
+[![CUDA Inference Engine CI](https://github.com/Sivadogga007/cuda-inference-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Sivadogga007/cuda-inference-engine/actions/workflows/ci.yml)
 [![CUDA](https://img.shields.io/badge/CUDA-12.4%2B-green.svg)](https://developer.nvidia.com/cuda-toolkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
